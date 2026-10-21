@@ -1,56 +1,58 @@
 name: Build Kotoba APK
 
 on:
-workflow_dispatch:
-
-permissions:
-contents: read
+  workflow_dispatch:
 
 jobs:
-build:
-runs-on: ubuntu-latest
-steps:
-- name: Checkout repository
-uses: actions/checkout@v4
+  build:
+    runs-on: ubuntu-latest
 
-  - name: Extract project
-    run: |
-      mkdir project
-      unzip -q kotoba-learn-russian-fixed.zip -d project
-      find project -maxdepth 4 -type f | head -100
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  - name: Set up Java
-    uses: actions/setup-java@v4
-    with:
-      distribution: temurin
-      java-version: '17'
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
 
-  - name: Set up Gradle
-    uses: gradle/actions/setup-gradle@v4
-    with:
-      gradle-version: '8.7'
+      - name: Extract archive
+        shell: bash
+        run: |
+          set -e
+          mkdir -p project
+          unzip -q kotoba-learn-russian-fixed.zip -d project
 
-  - name: Show project structure
-    run: |
-      find project -name settings.gradle -o -name settings.gradle.kts
-      find project -name gradlew
+      - name: Find Android project
+        shell: bash
+        run: |
+          set -e
+          find project -type f \( -name settings.gradle -o -name settings.gradle.kts \)
+          find project -type f \( -name gradlew -o -name build.gradle -o -name build.gradle.kts \)
 
-  - name: Build APK
-    run: |
-      cd project
-      SETTINGS="$(find . -name settings.gradle -o -name settings.gradle.kts | head -1)"
-      if [ -z "$SETTINGS" ]; then
-        echo "Gradle settings file not found"
-        exit 1
-      fi
-      DIR="$(dirname "$SETTINGS")"
-      cd "$DIR"
-      gradle assembleDebug
+      - name: Build APK
+        shell: bash
+        run: |
+          set -e
+          SETTINGS=$(find project -type f \( -name settings.gradle -o -name settings.gradle.kts \) | head -n 1)
+          if [ -z "$SETTINGS" ]; then
+            echo "Gradle settings file not found"
+            exit 1
+          fi
+          DIR=$(dirname "$SETTINGS")
+          cd "$DIR"
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew assembleDebug
+          else
+            echo "Gradle wrapper not found"
+            exit 1
+          fi
 
-  - name: Upload APK
-    uses: actions/upload-artifact@v4
-    with:
-      name: kotoba-debug-apk
-      path: project/**/build/outputs/apk/debug/*.apk
-      if-no-files-found: error
-      retention-days: 30
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kotoba-debug-apk
+          path: project/**/build/outputs/apk/**/*.apk
+          if-no-files-found: error

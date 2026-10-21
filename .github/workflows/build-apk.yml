@@ -9,10 +9,9 @@ contents: read
 jobs:
 build:
 runs-on: ubuntu-latest
-
 steps:
-  - name: Download repository
-    uses: actions/checkout@v4
+- name: Checkout repository
+uses: actions/checkout@v4
 
   - name: Extract project
     run: |
@@ -31,15 +30,27 @@ steps:
     with:
       gradle-version: '8.7'
 
-  - name: Build debug APK
+  - name: Show project structure
     run: |
-      cd project/kotoba-learn-main
+      find project -name settings.gradle -o -name settings.gradle.kts
+      find project -name gradlew
+
+  - name: Build APK
+    run: |
+      cd project
+      SETTINGS="$(find . -name settings.gradle -o -name settings.gradle.kts | head -1)"
+      if [ -z "$SETTINGS" ]; then
+        echo "Gradle settings file not found"
+        exit 1
+      fi
+      DIR="$(dirname "$SETTINGS")"
+      cd "$DIR"
       gradle assembleDebug
 
   - name: Upload APK
     uses: actions/upload-artifact@v4
     with:
       name: kotoba-debug-apk
-      path: project/kotoba-learn-main/app/build/outputs/apk/debug/app-debug.apk
+      path: project/**/build/outputs/apk/debug/*.apk
       if-no-files-found: error
       retention-days: 30

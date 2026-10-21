@@ -1,0 +1,45 @@
+name: Build Kotoba APK
+
+on:
+workflow_dispatch:
+
+permissions:
+contents: read
+
+jobs:
+build:
+runs-on: ubuntu-latest
+
+steps:
+  - name: Download repository
+    uses: actions/checkout@v4
+
+  - name: Extract project
+    run: |
+      mkdir project
+      unzip -q kotoba-learn-russian-fixed.zip -d project
+      find project -maxdepth 4 -type f | head -100
+
+  - name: Set up Java
+    uses: actions/setup-java@v4
+    with:
+      distribution: temurin
+      java-version: '17'
+
+  - name: Set up Gradle
+    uses: gradle/actions/setup-gradle@v4
+    with:
+      gradle-version: '8.7'
+
+  - name: Build debug APK
+    run: |
+      cd project/kotoba-learn-main
+      gradle assembleDebug
+
+  - name: Upload APK
+    uses: actions/upload-artifact@v4
+    with:
+      name: kotoba-debug-apk
+      path: project/kotoba-learn-main/app/build/outputs/apk/debug/app-debug.apk
+      if-no-files-found: error
+      retention-days: 30
